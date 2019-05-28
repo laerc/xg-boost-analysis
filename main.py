@@ -42,13 +42,7 @@ def evalute_method(results, average):
     print('F1 score: {} '.format(f1_score(y_test, y_predicted, average=average)))
 
 
-def main ():
-  file_path = 'UCI/iris.arff'
-  n_splits = 10
-
-  #create classifier
-  decision_tree = DecisionTreeClassifier()
-
+def solve(file_path, classifier, n_splits=5, average='micro'):
   #read .arff from file
   data, meta = arff.loadarff(file_path)
 
@@ -56,9 +50,19 @@ def main ():
   shuffled_data = np.random.shuffle(data)
 
   #train and test classfier using K-fold
-  results = train_and_test(n_splits, data, decision_tree)
+  results = train_and_test(n_splits, data, classifier)
 
-  evalute_method(results, average='micro')
+  evalute_method(results, average)
 
+
+def main ():
+  file_path = 'UCI/iris.arff'
+  n_splits = 10
+
+  #create classifier
+  decision_tree = DecisionTreeClassifier()
+
+  #solve for a classifier
+  solve(file_path, decision_tree, n_splits)
 
 main()
