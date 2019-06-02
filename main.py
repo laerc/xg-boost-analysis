@@ -58,11 +58,17 @@ def train_and_test(n_splits, data, classifier, column_class='class', normalize=F
     x_train = (train.loc[:, train.columns != column_class])
     y_train = (train[column_class])
 
+    if(normalize == True):
+      x_train = normalize_data(x_train)
+
     classifier = classifier.fit(x_train, y_train)
     
     #convert to ta list, then remove the last element(the class)
     x_test = (test.loc[:, test.columns != column_class])  
     y_test = (test[column_class])
+
+    if(normalize == True):
+      x_test = normalize_data(x_test)
 
     #predict
     y_predicted = classifier.predict(x_test)
@@ -71,16 +77,38 @@ def train_and_test(n_splits, data, classifier, column_class='class', normalize=F
   return results
 
 def evalute_method(results, average):
+  
+  best_f1_score = 0.0
+  best_acc_score = 0.0
+  avg_f1_score = 0.0
+  avg_acc_score = 0.0
+
   for execution in results:
     y_test = execution[0]
     y_predicted = execution[1]
+    
+    best_f1_score = max(best_f1_score, f1_score(y_test, y_predicted, average=average))
+    best_acc_score = max(best_acc_score, accuracy_score(y_test, y_predicted))
+
+    avg_f1_score += f1_score(y_test, y_predicted, average=average)
+    avg_acc_score += accuracy_score(y_test, y_predicted)
   
-    print('Accuracy: {} '.format(accuracy_score(y_test, y_predicted)))
-    print('F1 score: {} '.format(f1_score(y_test, y_predicted, average=average)))
+  avg_f1_score /= float(len(results))
+  avg_acc_score /= float(len(results))
+
+  print('Max Accuracy: {} '.format(best_acc_score))
+  print('Max F1 score: {} '.format(best_f1_score))
+
+  print('Average Accuracy: {} '.format(avg_acc_score))
+  print('Average F1 score: {} '.format(avg_f1_score))
+
   print('-------------------------------------------------------------------')
+  return best_acc_score, best_f1_score
 
 
-def solve(file_path, classifiers, column_class='class', cat_column='', columns_to_drop=[], discrete_columns=[], n_splits=5, n_segments=5, average='micro', normalize=False):
+def solve(file_path, classifiers, column_class='class', cat_column='', columns_to_drop=[], 
+          discrete_columns=[], n_splits=5, n_segments=5, average='macro', normalize=False):
+ 
   #read .arff from file
   data, meta = arff.loadarff(file_path)
 
@@ -107,7 +135,7 @@ def solve(file_path, classifiers, column_class='class', cat_column='', columns_t
   for classifier, classifier_name in classifiers:
     print(classifier_name) 
     #train and test classfier using K-fold
-    results = train_and_test(n_splits, shuffled_data, classifier, column_class=column_class)
+    results = train_and_test(n_splits, shuffled_data, classifier, column_class=column_class, normalize=normalize)
 
     evalute_method(results, average)
 
@@ -136,6 +164,7 @@ def main ():
     discrete_column = file_discrete_column[index]
     print('================================== {} ====================================='.format(file_path))
     #solve for a classifier
-    solve(file_path=file_path, classifiers=[(decision_tree, 'Decision Tree'), (random_forest, 'Random Forest'), (xg_boost, 'XG Boosting Tree')], column_class=cat_column, cat_column=cat_column, columns_to_drop=drop_column, discrete_columns=discrete_column, n_splits=n_splits)
+    solve(file_path=file_path, classifiers=[(decision_tree, 'Decision Tree'), (random_forest, 'Random Forest'), (xg_boost, 'XG Boosting Tree')], 
+          column_class=cat_column, cat_column=cat_column, columns_to_drop=drop_column, discrete_columns=discrete_column, n_splits=n_splits)
 
 main()
